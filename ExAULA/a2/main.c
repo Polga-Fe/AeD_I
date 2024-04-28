@@ -41,6 +41,14 @@ void adicionarPessoa(Agenda *agenda, Pessoa *novaPessoa){
         atual->prox = pessoa;
     }
     agenda->tam++;
+
+    Pessoa *tmp = (Pessoa*)realloc(agenda->inicio, agenda->tam * sizeof(Pessoa));
+    if (tmp != NULL) {
+        agenda->inicio = tmp;
+    } else {
+        printf("Erro ao realocar memória para a lista de pessoas.\n");
+        exit(1);
+    }
 }
 
 void mostrarAgenda(Agenda *agenda){
