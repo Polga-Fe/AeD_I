@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "e:/CODES/VSCODE/ESTUDOS/FACULDADE/UFPel_ALGO/C_AeD_I/AeD_I/a2",
-      "program": "e:/CODES/VSCODE/ESTUDOS/FACULDADE/UFPel_ALGO/C_AeD_I/AeD_I/a2/build/Debug/outDebug",
+      "cwd": "e:/CODES/VSCODE/ESTUDOS/FACULDADE/UFPel_ALGO/C_AeD_I/AeD_I/ExAULA/a2",
+      "program": "e:/CODES/VSCODE/ESTUDOS/FACULDADE/UFPel_ALGO/C_AeD_I/AeD_I/ExAULA/a2/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
