@@ -2,23 +2,24 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NAME sizeof(char) * 20    // Tamanho da variável nome
-#define AGE sizeof(int)           // Tamanho da variável idade
-#define EMAIL sizeof(char) * 20   // Tamanho da variável email
+#define NAME                sizeof(char) * 20       // Tamanho da variável nome
+#define AGE                 sizeof(int)             // Tamanho da variável idade
+#define EMAIL               sizeof(char) * 20       // Tamanho da variável email
 
-#define PESSOA (NAME + AGE + EMAIL)  // Tamanho de uma pessoa (nome, idade, email)
+#define PESSOA (NAME + AGE + EMAIL + sizeof(void*)*2)   // Tamanho de uma pessoa (nome, idade, email)
+                                                        // + 2 ponteiros vazios (pPrev e pNext)
 
-#define OPTIONS sizeof(int)
-#define BUSCA sizeof(char) * 20
-#define CONTADOR sizeof(int)
-#define TAMANHO sizeof(int)
+#define OPTIONS             sizeof(int)          // variável para escolha no menu
+#define BUSCA               sizeof(char) * 20    // nome a ser buscado
+#define CONTADOR            sizeof(int)         // variável vazia para loop no for
+#define TAMANHO             sizeof(int)         // contador para o numero de ctts na agenda
 
 #define HEAD (OPTIONS + TAMANHO + CONTADOR + BUSCA)  // Tamanho do cabeçalho (opções, tamanho, contador, busca)
 #define BUFFER (HEAD + PESSOA)
 
 void *addPessoa(void *pBuffer);
-void removePessoa();
-void searchPessoa();
+void removePessoa(void *pBuffer);
+void searchPessoa(void *pBuffer);
 void showPessoas(void *pBuffer);
 
 int main(void) {
@@ -45,7 +46,6 @@ int main(void) {
         printf("3. PROCURAR PESSOA\n");
         printf("4. MOSTRAR AGENDA\n");
         printf("0. SAIR\n");
-        printf("Digite sua opção: ");
         scanf("%d", (int*)pBuffer);
 
         switch (*(int*)pBuffer) {
@@ -57,16 +57,16 @@ int main(void) {
                 pBuffer = addPessoa(pBuffer);
                 break;
             case 2:
-                removePessoa();
+                removePessoa(pBuffer);
                 break;
             case 3:
-                searchPessoa();
+                searchPessoa(pBuffer);
                 break;
             case 4:
                 showPessoas(pBuffer);
                 break;
             default:
-                printf("Opção inválida. Tente novamente.\n");
+                printf("OPÇÃO INVÁLIDA. TENTA UMA DAS QUE PODE AÍ Ô MEU.\n");
                 break;
         }
     }
@@ -76,10 +76,24 @@ int main(void) {
 }
 
 void *addPessoa(void *pBuffer) {
+    // realloc p/ nova pessoa
+    pBuffer = realloc(pBuffer, HEAD + PESSOA *(*(int*)(pBuffer + TAMANHO) + 1));
+    if (pBuffer == NULL) {
+        printf("Erro em alocação de memória!\n");
+        exit(1);
+    }
+
+    // inicializa os ponteiros de pessoa
     void *pPessoa = (char*)pBuffer + HEAD + (PESSOA * (*(int*)(pBuffer + TAMANHO)));
-    void *pNome = pPessoa;
-    void *pIdade = (char*)pPessoa + NAME;
-    void *pEmail = (char*)pPessoa + NAME + AGE;
+    void **pPrev = (void*)pPessoa;
+    void *pNome = (char*)pPessoa + sizeof(void*);
+    void *pIdade = (char*)pPessoa + sizeof(void*) + NAME;
+    void *pEmail = (char*)pPessoa + sizeof(void*) + NAME + AGE;
+    void **pNext = (void*)pPessoa + sizeof(void*) + NAME + AGE + EMAIL;
+
+    // Inicializa ponteiros prev e next vazios
+    *pPrev = NULL;
+    *pNext = NULL;
 
     // Adiciona a pessoa ao buffer
     printf("NOME: ");
@@ -90,32 +104,79 @@ void *addPessoa(void *pBuffer) {
     printf("EMAIL: ");
     scanf("%s", (char*)pEmail);
 
+    // Ordena do fim para o inicio
+
+    // Ponteiro pCorrente recebe o ponteiro pPessoa para comparação e ordenação
+
+
     // Incrementa o contador de pessoas
     (*(int*)(pBuffer + TAMANHO))++;
 
     return pBuffer;
 }
 
-void removePessoa() {
-    printf("EM BREVE: REMOVE.\n");
+void removePessoa(void *pBuffer) {
+    printf("Digite o nome a ser removido: ");
+    scanf("%s", (char*)(pBuffer + BUSCA));
+
+    void *pPrev = NULL; // Ponteiro para o contato anterior
+    void *pPessoa = *(void**)(pBuffer + OPTIONS); // Ponteiro para o início da lista
+
+    // Percorre a lista de pessoas
+    for (*(int*)(pBuffer + OPTIONS + TAMANHO) = 0; *(int*)(pBuffer + OPTIONS + TAMANHO) < *(int*)(pBuffer + OPTIONS); (*(int*)(pBuffer + OPTIONS + TAMANHO))++) {
+            void *pPessoa = (char*)pBuffer + HEAD + (PESSOA * (*(int*)(pBuffer + OPTIONS + TAMANHO)));
+            // Verifica se a pessoa foi encontrada
+            // Se pessoa nao está vazio e a busca realizada por BUSCA não retorna vazia, então retorna os dados da pessoa
+            if (pPessoa != NULL && strcmp((char*)(pBuffer + BUSCA), (char*)pBuffer + HEAD + (PESSOA * (*(int*)(pBuffer + OPTIONS + TAMANHO)))) != 0){
+                void *pPessoa = (char*)pBuffer + HEAD + (PESSOA * (*(int*)(pBuffer + OPTIONS + TAMANHO)));
+                // pessoa é atribuida a posição anterior
+                pPrev = pPessoa;
+                // check se nome buscado foi atribuído de pPessoa p/ a pPrev
+                printf("\nNOME: %s\n", (char*)pPrev + sizeof(void*));
+                printf("IDADE: %d\n", *(int*)((char*)pPrev + sizeof(void*) + NAME));
+                printf("EMAIL: %s\n", (char*)((char*)pPrev + sizeof(void*) + NAME + AGE));
+
+                // levar pPrev ao inicio da agenda
+
+                //eliminar pPrev e atribuir pPessoa ao slot
+
+                // ligar os ponteiros pPrev e pNext para "tapar o buraco" do pPessoa removido
+
+            } else {
+                printf("CONTATO NÃO ENCONTRADO!\n");
+            }
+        }
 }
 
-void searchPessoa() {
-    printf("EM BREVE: BUSCA.\n");
+void searchPessoa(void *pBuffer) {
+    printf("\nDIGITE O NOME A SER BUSCADO: ");
+    scanf("%s", (char*)(pBuffer + BUSCA));
+    // contador percorre lista completa
+    for (*(int*)(pBuffer + OPTIONS + TAMANHO) = 0; *(int*)(pBuffer + OPTIONS + TAMANHO) < *(int*)(pBuffer + OPTIONS); (*(int*)(pBuffer + OPTIONS + TAMANHO))++) {
+            void *pPessoa = (char*)pBuffer + HEAD + (PESSOA * (*(int*)(pBuffer + OPTIONS + TAMANHO)));
+            // Verifica se a pessoa foi encontrada
+            // Se pessoa nao está vazio e a busca realizada por BUSCA não retorna vazia, então retorna os dados da pessoa
+            if (pPessoa != NULL && strcmp((char*)(pBuffer + BUSCA), (char*)pBuffer + HEAD + (PESSOA * (*(int*)(pBuffer + OPTIONS + TAMANHO)))) != 0){
+                printf("\nNOME: %s\n", (char*)pPessoa + sizeof(void*));
+                printf("IDADE: %d\n", *(int*)((char*)pPessoa + sizeof(void*) + NAME));
+                printf("EMAIL: %s\n", (char*)((char*)pPessoa + sizeof(void*) + NAME + AGE));
+            } else {
+                printf("CONTATO NÃO ENCONTRADO!\n");
+            }
+    }
 }
 
 void showPessoas(void *pBuffer) {
     printf("\t\tAGENDA: \n");
-
     if (*(int*)(pBuffer + OPTIONS) > 0) {
         for (*(int*)(pBuffer + OPTIONS + TAMANHO) = 0; *(int*)(pBuffer + OPTIONS + TAMANHO) < *(int*)(pBuffer + OPTIONS); (*(int*)(pBuffer + OPTIONS + TAMANHO))++) {
             void *pPessoa = (char*)pBuffer + HEAD + (PESSOA * (*(int*)(pBuffer + OPTIONS + TAMANHO)));
-            printf("\nNome: %s\n", (char*)pPessoa);
-            printf("Idade: %d\n", *(int*)((char*)pPessoa + NAME));
-            printf("Email: %s\n", (char*)((char*)pPessoa + NAME + AGE));
+            printf("\nNOME: %s\n", (char*)pPessoa + sizeof(void*));
+            printf("IDADE: %d\n", *(int*)((char*)pPessoa + sizeof(void*) + NAME));
+            printf("EMAIL: %s\n", (char*)((char*)pPessoa + sizeof(void*) + NAME + AGE));
         }
         } else {
-        printf("\nA lista está vazia!\n");
+        printf("\nLISTA VAZIA!\n");
     }
 
     printf("\n");
