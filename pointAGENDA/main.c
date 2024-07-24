@@ -2,20 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NAME                sizeof(char) * 20       // Tamanho da variável nome
-#define AGE                 sizeof(int)             // Tamanho da variável idade
-#define EMAIL               sizeof(char) * 20       // Tamanho da variável email
-
-#define PESSOA (NAME + AGE + EMAIL + sizeof(void*)*2)   // Tamanho de uma pessoa (nome, idade, email)
-                                                        // + 2 ponteiros vazios (pPrev e pNext)
-
-#define OPTIONS             sizeof(int)          // variável para escolha no menu
-#define BUSCA               sizeof(char) * 20    // nome a ser buscado
-#define CONTADOR            sizeof(int)         // variável vazia para loop no for
-#define TAMANHO             sizeof(int)         // contador para o numero de ctts na agenda
-
-#define HEAD (OPTIONS + TAMANHO + CONTADOR + BUSCA)  // Tamanho do cabeçalho (opções, tamanho, contador, busca)
-#define BUFFER (HEAD + PESSOA)
+#define HEADER ((sizeof(int) * 3) + (sizeof(char) * 20) + (sizeof(void*)))
+#define PESSOA ((sizeof(char) * 20) + (sizeof(int)) + (sizeof(char) * 32) + (sizeof(void*) * 2))
 
 void *addPessoa(void *pBuffer);
 void removePessoa(void *pBuffer);
@@ -25,18 +13,23 @@ void showPessoas(void *pBuffer);
 int main(void) {
     void *pBuffer;
 
-    // Atribuir pBuffer com HEAD e PESSOA
-    pBuffer = malloc(BUFFER);
+    // Atribuir pBuffer com HEADER
+    pBuffer = malloc(HEADER);
     if (pBuffer == NULL) {
         printf("Erro em alocação de memória!");
         return 1;
     }
 
-    // Inicializar as variáveis de controle
-    *(int*)(pBuffer + OPTIONS) = 0; // Opção selecionada
-    *(int*)(pBuffer + TAMANHO) = 0; // Tamanho da lista (número de pessoas)
-    *(int*)(pBuffer + CONTADOR) = 0; // Contador para loops
-    memset(pBuffer + BUSCA, 0, 20); // Busca
+    int *options = (int*)pBuffer; // Opção selecionada
+    int *tam = (int*)(pBuffer + sizeof(int)); // Tamanho da lista
+    int *loop = (int*)(pBuffer + (sizeof(int) * 2)); // Contador para loops
+    char *busca = (char*)(pBuffer + (sizeof(int) * 3)); // Busca
+    void **header = (void**)(pBuffer + (sizeof(int) * 3) + (sizeof(char) * 20)); // Cabeça
+
+    *options = 0;
+    *tam = 0;
+    *loop = 0;
+    *header = NULL;
 
     while (1) {
         // Menu de opções
@@ -46,9 +39,12 @@ int main(void) {
         printf("3. PROCURAR PESSOA\n");
         printf("4. MOSTRAR AGENDA\n");
         printf("0. SAIR\n");
-        scanf("%d", (int*)pBuffer);
+        scanf("%d", options);
 
-        switch (*(int*)pBuffer) {
+        printf("\nOPTION: %d\n", *options);
+        printf("TAM: %d\n", *tam);
+
+        switch (*options) {
             case 0:
                 printf("SAINDO . . . \n");
                 free(pBuffer);
@@ -76,108 +72,131 @@ int main(void) {
 }
 
 void *addPessoa(void *pBuffer) {
-    // realloc p/ nova pessoa
-    pBuffer = realloc(pBuffer, HEAD + PESSOA *(*(int*)(pBuffer + TAMANHO) + 1));
-    if (pBuffer == NULL) {
-        printf("Erro em alocação de memória!\n");
-        exit(1);
+    void *pPessoa = malloc(PESSOA);
+    if (pPessoa == NULL) {
+        printf("Erro em alocação de memória para nova pessoa!");
+        return pBuffer;
     }
 
-    // inicializa os ponteiros de pessoa
-    void *pPessoa = (char*)pBuffer + HEAD + (PESSOA * (*(int*)(pBuffer + TAMANHO)));
-    void **pPrev = (void*)pPessoa;
-    void *pNome = (char*)pPessoa + sizeof(void*);
-    void *pIdade = (char*)pPessoa + sizeof(void*) + NAME;
-    void *pEmail = (char*)pPessoa + sizeof(void*) + NAME + AGE;
-    void **pNext = (void*)pPessoa + sizeof(void*) + NAME + AGE + EMAIL;
+    int *tam = (int*)(pBuffer + sizeof(int));
+    void **header = (void**)(pBuffer + (sizeof(int) * 3) + (sizeof(char) * 20));
 
-    // Inicializa ponteiros prev e next vazios
+    void **pPrev = (void**)pPessoa;
+    char *pNome  = (char*)pPessoa + sizeof(void*);
+    int  *pIdade = (int*)(pPessoa + (sizeof(char) * 20) + sizeof(void*));
+    char *pEmail = (char*)(pPessoa + (sizeof(char) * 20) + sizeof(int) + sizeof(void*));
+    void **pNext = (void**)(pPessoa + (sizeof(char) * 20) + (sizeof(int)) + (sizeof(char) * 32) + sizeof(void*));
+
     *pPrev = NULL;
     *pNext = NULL;
 
-    // Adiciona a pessoa ao buffer
     printf("NOME: ");
-    scanf("%s", (char*)pNome);
+    scanf("%s", pNome);
     printf("IDADE: ");
-    scanf("%d", (int*)pIdade);
-    getchar(); // Limpa o buffer de entrada
+    scanf("%d", pIdade);
     printf("EMAIL: ");
-    scanf("%s", (char*)pEmail);
+    scanf("%s", pEmail);
 
-    // Ordena do fim para o inicio
+    if (*tam == 0) {
+        *header = pPessoa;
+    } else {
+        void *toto = *header;
+        void *pAnterior = NULL;
 
-    // Ponteiro pCorrente recebe o ponteiro pPessoa para comparação e ordenação
+        while (toto != NULL && strcmp((char*)toto + sizeof(void*), pNome) < 0) {
+            pAnterior = toto;
+            toto = *(void**)((char*)toto + PESSOA - sizeof(void*));
+        }
 
+        if (pAnterior == NULL) {
+            *header = pPessoa;
+        } else {
+            *(void**)((char*)pAnterior + PESSOA - sizeof(void*)) = pPessoa;
+            *pPrev = pAnterior;
+        }
 
-    // Incrementa o contador de pessoas
-    (*(int*)(pBuffer + TAMANHO))++;
+        if (toto != NULL) {
+            *pNext = toto;
+            *(void**)((char*)toto) = pPessoa;
+        }
+    }
 
+    (*tam)++;
     return pBuffer;
 }
 
 void removePessoa(void *pBuffer) {
     printf("Digite o nome a ser removido: ");
-    scanf("%s", (char*)(pBuffer + BUSCA));
+    scanf("%s", (char*)(pBuffer + sizeof(int) * 3));
 
-    void *pPrev = NULL; // Ponteiro para o contato anterior
-    void *pPessoa = *(void**)(pBuffer + OPTIONS); // Ponteiro para o início da lista
+    int *tam = (int*)(pBuffer + sizeof(int));
+    void **header = (void**)(pBuffer + (sizeof(int) * 3) + (sizeof(char) * 20));
 
-    // Percorre a lista de pessoas
-    for (*(int*)(pBuffer + OPTIONS + TAMANHO) = 0; *(int*)(pBuffer + OPTIONS + TAMANHO) < *(int*)(pBuffer + OPTIONS); (*(int*)(pBuffer + OPTIONS + TAMANHO))++) {
-            void *pPessoa = (char*)pBuffer + HEAD + (PESSOA * (*(int*)(pBuffer + OPTIONS + TAMANHO)));
-            // Verifica se a pessoa foi encontrada
-            // Se pessoa nao está vazio e a busca realizada por BUSCA não retorna vazia, então retorna os dados da pessoa
-            if (pPessoa != NULL && strcmp((char*)(pBuffer + BUSCA), (char*)pBuffer + HEAD + (PESSOA * (*(int*)(pBuffer + OPTIONS + TAMANHO)))) != 0){
-                void *pPessoa = (char*)pBuffer + HEAD + (PESSOA * (*(int*)(pBuffer + OPTIONS + TAMANHO)));
-                // pessoa é atribuida a posição anterior
-                pPrev = pPessoa;
-                // check se nome buscado foi atribuído de pPessoa p/ a pPrev
-                printf("\nNOME: %s\n", (char*)pPrev + sizeof(void*));
-                printf("IDADE: %d\n", *(int*)((char*)pPrev + sizeof(void*) + NAME));
-                printf("EMAIL: %s\n", (char*)((char*)pPrev + sizeof(void*) + NAME + AGE));
+    void *toto = *header;
+    void *pAnterior = NULL;
 
-                // levar pPrev ao inicio da agenda
+    while (toto != NULL && strcmp((char*)toto + sizeof(void*), (char*)(pBuffer + sizeof(int) * 3)) != 0) {
+        pAnterior = toto;
+        toto = *(void**)((char*)toto + PESSOA - sizeof(void*));
+    }
 
-                //eliminar pPrev e atribuir pPessoa ao slot
+    if (toto == NULL) {
+        printf("CONTATO NÃO ENCONTRADO!\n");
+        return;
+    }
 
-                // ligar os ponteiros pPrev e pNext para "tapar o buraco" do pPessoa removido
+    if (pAnterior == NULL) {
+        *header = *(void**)((char*)toto + PESSOA - sizeof(void*));
+    } else {
+        *(void**)((char*)pAnterior + PESSOA - sizeof(void*)) = *(void**)((char*)toto + PESSOA - sizeof(void*));
+    }
 
-            } else {
-                printf("CONTATO NÃO ENCONTRADO!\n");
-            }
-        }
+    if (*(void**)((char*)toto + PESSOA - sizeof(void*)) != NULL) {
+        *(void**)((char*)*(void**)((char*)toto + PESSOA - sizeof(void*)) + sizeof(void*)) = pAnterior;
+    }
+
+    free(toto);
+    (*tam)--;
+    printf("CONTATO REMOVIDO COM SUCESSO!\n");
 }
 
 void searchPessoa(void *pBuffer) {
-    printf("\nDIGITE O NOME A SER BUSCADO: ");
-    scanf("%s", (char*)(pBuffer + BUSCA));
-    // contador percorre lista completa
-    for (*(int*)(pBuffer + OPTIONS + TAMANHO) = 0; *(int*)(pBuffer + OPTIONS + TAMANHO) < *(int*)(pBuffer + OPTIONS); (*(int*)(pBuffer + OPTIONS + TAMANHO))++) {
-            void *pPessoa = (char*)pBuffer + HEAD + (PESSOA * (*(int*)(pBuffer + OPTIONS + TAMANHO)));
-            // Verifica se a pessoa foi encontrada
-            // Se pessoa nao está vazio e a busca realizada por BUSCA não retorna vazia, então retorna os dados da pessoa
-            if (pPessoa != NULL && strcmp((char*)(pBuffer + BUSCA), (char*)pBuffer + HEAD + (PESSOA * (*(int*)(pBuffer + OPTIONS + TAMANHO)))) != 0){
-                printf("\nNOME: %s\n", (char*)pPessoa + sizeof(void*));
-                printf("IDADE: %d\n", *(int*)((char*)pPessoa + sizeof(void*) + NAME));
-                printf("EMAIL: %s\n", (char*)((char*)pPessoa + sizeof(void*) + NAME + AGE));
-            } else {
-                printf("CONTATO NÃO ENCONTRADO!\n");
-            }
+    printf("DIGITE O NOME A SER BUSCADO: ");
+    scanf("%s", (char*)(pBuffer + sizeof(int) * 3));
+
+    int *tam = (int*)(pBuffer + sizeof(int));
+    void **header = (void**)(pBuffer + (sizeof(int) * 3) + (sizeof(char) * 20));
+    void *toto = *header;
+
+    while (toto != NULL) {
+        if (strcmp((char*)toto + sizeof(void*), (char*)(pBuffer + sizeof(int) * 3)) == 0) {
+            printf("NOME: %s\n", (char*)toto + sizeof(void*));
+            printf("IDADE: %d\n", *(int*)((char*)toto + sizeof(void*) + sizeof(char) * 20));
+            printf("EMAIL: %s\n", (char*)((char*)toto + sizeof(void*) + 20 + sizeof(int)));
+            return;
+        }
+        toto = *(void**)((char*)toto + PESSOA - sizeof(void*));
     }
+    printf("CONTATO NÃO ENCONTRADO!\n");
 }
 
 void showPessoas(void *pBuffer) {
-    printf("\t\tAGENDA: \n");
-    if (*(int*)(pBuffer + OPTIONS) > 0) {
-        for (*(int*)(pBuffer + OPTIONS + TAMANHO) = 0; *(int*)(pBuffer + OPTIONS + TAMANHO) < *(int*)(pBuffer + OPTIONS); (*(int*)(pBuffer + OPTIONS + TAMANHO))++) {
-            void *pPessoa = (char*)pBuffer + HEAD + (PESSOA * (*(int*)(pBuffer + OPTIONS + TAMANHO)));
-            printf("\nNOME: %s\n", (char*)pPessoa + sizeof(void*));
-            printf("IDADE: %d\n", *(int*)((char*)pPessoa + sizeof(void*) + NAME));
-            printf("EMAIL: %s\n", (char*)((char*)pPessoa + sizeof(void*) + NAME + AGE));
-        }
-        } else {
-        printf("\nLISTA VAZIA!\n");
-    }
+    int *tam = (int*)(pBuffer + sizeof(int));
+    int *count = (int*)(pBuffer + sizeof(int) * 2);
+    void **header = (void**)(pBuffer + (sizeof(int) * 3) + (sizeof(char) * 20));
+    void *toto = *header;
 
-    printf("\n");
+    printf("\nAGENDA: \n");
+
+    if (*tam == 0) {
+        printf("VAZIA. TENTE ADICIONAR UM CONTATO NOVO\n");
+    } else {
+        while (toto != NULL) {
+            printf("NOME: %s\n", (char*)toto + sizeof(void*));
+            printf("IDADE: %d\n", *(int*)((char*)toto + sizeof(void*) + 20));
+            printf("EMAIL: %s\n", (char*)((char*)toto + sizeof(void*) + 20 + sizeof(int)));
+            toto = *(void**)((char*)toto + PESSOA - sizeof(void*));
+        }
+        printf("\n--------------------------------------------------------------------------------\n");
+    }
 }
