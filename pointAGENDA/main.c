@@ -137,7 +137,7 @@ void removePessoa(void *pBuffer) {
 
     while (toto != NULL && strcmp((char*)toto + sizeof(void*), (char*)(pBuffer + sizeof(int) * 3)) != 0) {
         pAnterior = toto;
-        toto = *(void**)((char*)toto + PESSOA - sizeof(void*));
+        toto = *(void**)((char*)toto + PESSOA + sizeof(void*));
     }
 
     if (toto == NULL) {
